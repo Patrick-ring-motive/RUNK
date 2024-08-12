@@ -1,0 +1,2 @@
+# Maths
+🫂 Maths in Go
