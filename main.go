@@ -61,28 +61,52 @@ type Number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr | ~float32 | ~float64 | ibyte
 }
 
+/*
+AsNumber is just used as a compiler hint to tell the compiler that the value can be any Number type.
+This is used to make the compiler happy when using narrowing conversions.
+*/
 func AsNumber[N Number](n N) N {
 	return n
 }
 
-/*Thi is the type safe number conversion. This should work for most scenarios.
-The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt.*/
+
+/*This is the helper function that makes all this possible without having to write a different implementation
+for each indiviual type. ConvertNumber handles converting between number types while maintaining the generic
+Number designation on the return. You'll see me using the `func(T)` syntax which is a pattern that I use to
+pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
+maitain type safety. This should work for most scenarios.
+The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we truncate*/
 func ConvertNumber[From Number, To Number](f From, t func(To)) To {
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
+	zt := utils.ZeroOfType(t)
+	max := MaxNum(zt)
+	min := MinNum(zt)
+
 	switch any(t).(type) {
 	case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
 		if(isNaN){
-			return utils.ZeroOfType(t)
+			return zt
 		}
 		if(istInf){
-			return MaxNum(utils.ZeroOfType(t))
+			return max
+		}
+		if(float64(f) > float64(max)){
+			return max
 		}
 		if(is_Inf){
-			return MinNum(utils.ZeroOfType(t))
+			return min
 		}
-		return To(f)
+		if(float64(f) < float64(min)){
+			return min
+		}
+		switch any(f).(type) {
+			case float32,float64:
+				return To(math.Trunc(float64(f)))
+			default:
+				return To(f)
+		}
 	case func(float32),func(float64):
 		return To(f)
 	default:
@@ -91,11 +115,8 @@ func ConvertNumber[From Number, To Number](f From, t func(To)) To {
 }
 
 /*
-This is the helper function that makes all this possible without having to write a different implementation
-for each indiviual type. CoerceNumber handles converting between number types while maintaining the generic
-Number designation on the return. You'll see me using the `func(T)` syntax which is a pattern that I use to
-pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
-maitain type safety. utils.SwitchType is a function that facilitates this. It attempts to convert the type to of the first parameter to the type passed as `func(T)` in the second parameter using a type switch.
+This is the forced number coercion function. utils.SwitchType is a function that facilitates this. 
+It attempts to convert the type to of the first parameter to the type passed as `func(T)` in the second parameter using a type switch.
 If it fails to convert then it will do an unsafe type coercion. This is a bad idea and should be avoided but
 it is the only way to get the compiler to do it sometimes.
 */
@@ -103,17 +124,32 @@ func CoerceNumber[From Number, To Number](f From, t func(To)) To {
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
+	zt := utils.ZeroOfType(t)
+	max := MaxNum(zt)
+	min := MinNum(zt)
 	switch any(t).(type) {
 		case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
-			if(isNaN){
-				return utils.ZeroOfType(t)
-			}
-			if(istInf){
-				return MaxNum(utils.ZeroOfType(t))
-			}
-			if(is_Inf){
-				return MinNum(utils.ZeroOfType(t))
-			}
+		if(isNaN){
+			return zt
+		}
+		if(istInf){
+			return max
+		}
+		if(float64(f) > float64(max)){
+			return max
+		}
+		if(is_Inf){
+			return min
+		}
+		if(float64(f) < float64(min)){
+			return min
+		}
+		switch any(f).(type) {
+			case float32,float64:
+				return To(math.Trunc(float64(f)))
+			default:
+				return To(f)
+		}
 	}
 	switch any(t).(type) {
 	case func(int):
@@ -170,8 +206,8 @@ func MinNum[N Number](num N) N {
 	}
 }
 
-func MaxNum[N Number](num N) N {
-	switch any(num).(type) {
+func MaxNum[N Number](num ...N) N {
+	switch any(num[0]).(type) {
 	case int:
 		return N(AsNumber(MaxInt))
 	case int8:
@@ -199,7 +235,7 @@ func MaxNum[N Number](num N) N {
 	case float64:
 		return N(AsNumber(MaxFloat64))
 	default:
-		return utils.ZeroOfType(utils.TypeOf(num))
+		return utils.ZeroOfType(utils.TypeOf(num[0]))
 	}
 }
 
@@ -237,5 +273,5 @@ func Acos[N Number](num N) N {
 
 func main() {
 	fmt.Println(Acos(int32(10)))
-	fmt.Println(MinNum(int8(1)))
+	fmt.Println(MaxFloat64,ConvertNumber(MaxFloat64,func(i float32){}))
 }
