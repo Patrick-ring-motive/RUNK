@@ -13,6 +13,7 @@ import (
 	"strconv"
 )
 
+/*Constant values for minimum and maximum values. Most are directly ripped from the original math*/
 const (
 	MaxInt                 int     = 1<<(strconv.IntSize-1) - 1  // MaxInt32 or MaxInt64 depending on intSize.
 	MinInt                 int     = -1 << (strconv.IntSize - 1) // MinInt32 or MinInt64 depending on intSize.
@@ -41,7 +42,6 @@ const (
 	MaxFloat32             float32 = 0x1p127 * (1 + (1 - 0x1p-23)) // 3.40282346638528859811704183484516925440e+38
 	MinFloat32             float32 = -MaxFloat32
 	SmallestNonzeroFloat32 float32 = 0x1p-126 * 0x1p-23 // 1.401298464324817070923729583289916131280e-45
-
 	MaxFloat64             float64 = 0x1p1023 * (1 + (1 - 0x1p-52)) // 1.79769313486231570814527423731704356798070e+308
 	MinFloat64             float64 = -MaxFloat64
 	SmallestNonzeroFloat64 float64 = 0x1p-1022 * 0x1p-52 // 4.9406564584124654417656879286822137236505980e-324
@@ -50,7 +50,7 @@ const (
 /*
 byte is an alias for uint8 but it seems wrong to not include it explicitly.
 The compiler won't let me do have both but just so you know it isn't forgotten I have included it with this interface.
-Also rune isn't included because I think it should be treated more like a character than a number. That may change.
+Also rune isn't included because I think it should be treated more like a character than a number. That may change. I also considered having boolean and string representations of numbers but for now these will do.
 */
 type ibyte interface {
 	~byte
@@ -183,6 +183,7 @@ func CoerceNumber[From Number, To Number](f From, t func(To)) To {
 	}
 }
 
+/* This function takes in the minimum number from the bottom of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
 func MinNum[N Number](num N) N {
 	switch any(num).(type) {
 	case int:
@@ -206,6 +207,7 @@ func MinNum[N Number](num N) N {
 	}
 }
 
+/* This function takes in the maximum number from the top of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
 func MaxNum[N Number](num ...N) N {
 	switch any(num[0]).(type) {
 	case int:
@@ -239,6 +241,8 @@ func MaxNum[N Number](num ...N) N {
 	}
 }
 
+/* This finds the max of a list of numbers. They can be of any number type as long as they are the same type.
+The original math.Max only evaluates the max of 2 values. This maintains that functionality but is more flexible*/
 func Max[N Number](nums ...N) N {
 	var max N = MinNum(nums[0])
 	for _, num := range nums {
@@ -249,6 +253,8 @@ func Max[N Number](nums ...N) N {
 	return max
 }
 
+/* This finds the min of a list of numbers. They can be of any number type as long as they are the same type.
+The original math.Min only evaluates the min of 2 values. This maintains that functionality but is more flexible*/
 func Min[N Number](nums ...N) N {
 	var min N = MaxNum(nums[0])
 	for _, num := range nums {
