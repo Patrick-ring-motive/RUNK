@@ -1,8 +1,9 @@
 package main
 
-//package maths
+//package RUNK
+/*Ring Universal Number Kounter*/
 /*
-The maths package provides generic alternatives to the std math package to allow usage
+The RUNK package provides generic alternatives to the std math package to allow usage
 with any of go's number types. There are some minor additions added for convenience but the original
 behavior is preserved.
 */
@@ -130,7 +131,7 @@ func CoerceNumber[From Number, To Number](f From, t func(To)) To {
 	switch any(t).(type) {
 		case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
 		if(isNaN){
-			return zt
+			return z
 		}
 		if(istInf){
 			return max
