@@ -80,14 +80,14 @@ func ConvertNumber[From Number, To Number](f From, t func(To)) To {
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	zt := utils.ZeroOfType(t)
-	max := MaxNum(zt)
-	min := MinNum(zt)
+	z := utils.ZeroOfType(t)
+	max := MaxNum(z)
+	min := MinNum(z)
 
 	switch any(t).(type) {
 	case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
 		if(isNaN){
-			return zt
+			return z
 		}
 		if(istInf){
 			return max
@@ -124,9 +124,9 @@ func CoerceNumber[From Number, To Number](f From, t func(To)) To {
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	zt := utils.ZeroOfType(t)
-	max := MaxNum(zt)
-	min := MinNum(zt)
+	z := utils.ZeroOfType(t)
+	max := MaxNum(z)
+	min := MinNum(z)
 	switch any(t).(type) {
 		case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
 		if(isNaN){
