@@ -1,0 +1,1 @@
+go build -ldflags "-g" -gcflags="-B -v -std"  -o RUNK RUNK.go

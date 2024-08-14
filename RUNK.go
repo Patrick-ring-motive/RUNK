@@ -1,6 +1,4 @@
-package main
-
-//package RUNK
+package RUNK
 /*Ring Universal Number Kounter*/
 /*
 The RUNK package provides generic alternatives to the std math package to allow usage
