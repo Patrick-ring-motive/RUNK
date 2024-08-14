@@ -86,34 +86,41 @@ Number designation on the return. You'll see me using the `func(T)` syntax which
 pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
 maitain type safety. This should work for most scenarios.
 The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we truncate*/
+
 func ConvertNum[To Number](f any, t ...func(To)) To {
 	switch v := f.(type) {
 		case 	int:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case int8:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case int16:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case int32:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case int64:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case uint:
 			ConvertNumber(v,utils.TypeRef[To]())
 		case uint8:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case uint16:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case uint32:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case uint64:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case uintptr:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case float32:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]())
 		case float64:
-			ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber(v,utils.TypeRef[To]()) 
+	case bool:
+		if(v){
+			return To(1)
+		}else{
+			return To(0)
+		}
 	default:
 			return utils.ConvertType(f,utils.TypeRef[To]())
 	}
