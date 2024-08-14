@@ -81,6 +81,39 @@ Number designation on the return. You'll see me using the `func(T)` syntax which
 pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
 maitain type safety. This should work for most scenarios.
 The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we truncate*/
+func ConvertNum[To Number](f any, t ...func(To)) To {
+	switch v := f.(type) {
+		case 	int:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case int8:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case int16:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case int32:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case int64:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uint:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uint8:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uint16:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uint32:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uint64:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case uintptr:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case float32:
+			ConvertNumber(v,utils.TypeRef[To]())
+		case float64:
+			ConvertNumber(v,utils.TypeRef[To]())
+	default:
+			return utils.ConvertType(f,utils.TypeRef[To]())
+	}
+	return utils.ConvertType(f,utils.TypeRef[To]())
+}
 func ConvertNumber[From Number, To Number](f From, t ...func(To)) To {
 	return ConvertNumberBy(f, func(To){})
 }
@@ -329,35 +362,35 @@ func Abs[N Number](num N) N {
 }
 
 func Acos[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Acos(float64(num)))
+	return ConvertNum[N](math.Acos(float64(num)))
 }
 
 func Acosh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Acosh(float64(num)))
+	return ConvertNum[N](math.Acosh(float64(num)))
 }
 
 func Asin[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Asin(float64(num)))
+	return ConvertNum[N](math.Asin(float64(num)))
 }
 
 func Asinh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Asinh(float64(num)))
+	return ConvertNum[N](math.Asinh(float64(num)))
 }
 
 func Atan[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Atan(float64(num)))
+	return ConvertNum[N](math.Atan(float64(num)))
 }
 
 func Atan2[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Atan2(float64(x),float64(y)))
+	return ConvertNum[N](math.Atan2(float64(x),float64(y)))
 }
 
 func Atanh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Atanh(float64(num)))
+	return ConvertNum[N](math.Atanh(float64(num)))
 }
 
 func Cbrt[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Cbrt(float64(num)))
+	return ConvertNum[N](math.Cbrt(float64(num)))
 }
 
 func Ceil[N Number](num N) N {
@@ -365,51 +398,51 @@ func Ceil[N Number](num N) N {
 }
 
 func Copysign[N Number,M Number](f N,sign M) N {
-	return ConvertNumber[float64,N](math.Copysign(float64(f),float64(sign)))
+	return ConvertNum[N](math.Copysign(float64(f),float64(sign)))
 }
 
 func Cos[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Cos(float64(num)))
+	return ConvertNum[N](math.Cos(float64(num)))
 }
 
 func Cosh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Cosh(float64(num)))
+	return ConvertNum[N](math.Cosh(float64(num)))
 }
 
 func Dim[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Dim(float64(x),float64(y)))
+	return ConvertNum[N](math.Dim(float64(x),float64(y)))
 }
 
 func Erf[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Erf(float64(num)))
+	return ConvertNum[N](math.Erf(float64(num)))
 }
 
 func Erfc[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Erfc(float64(num)))
+	return ConvertNum[N](math.Erfc(float64(num)))
 }
 
 func Erfcinv[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Erfcinv(float64(num)))
+	return ConvertNum[N](math.Erfcinv(float64(num)))
 }
 
 func Erfinv[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Erfinv(float64(num)))
+	return ConvertNum[N](math.Erfinv(float64(num)))
 }
 
 func Exp[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Exp(float64(num)))
+	return ConvertNum[N](math.Exp(float64(num)))
 }
 
 func Exp2[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Exp2(float64(num)))
+	return ConvertNum[N](math.Exp2(float64(num)))
 }
 
 func Expm1[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Expm1(float64(num)))
+	return ConvertNum[N](math.Expm1(float64(num)))
 }
 
 func FMA[N Number,M Number,W Number](x N,y M,z W) N {
-	return ConvertNumber[float64,N](math.FMA(float64(x),float64(y),float64(z)))
+	return ConvertNum[N](math.FMA(float64(x),float64(y),float64(z)))
 }
 
 func Float32bits[N Number](x N) uint32 {
@@ -437,19 +470,19 @@ func Frexp[N Number](num N) (frac float64, exp int) {
 }
 
 func Gamma[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Gamma(float64(num)))
+	return ConvertNum[N](math.Gamma(float64(num)))
 }
 
 func Hypot[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Hypot(float64(x),float64(y)))
+	return ConvertNum[N](math.Hypot(float64(x),float64(y)))
 }
 
 func Ilogb[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Gamma(float64(num)))
+	return ConvertNum[N](math.Gamma(float64(num)))
 }
 
 func Inf[N Number](num N)float64 {
-	return math.Inf(ConvertNumber(num,utils.TypeRef[int]()))
+	return math.Inf(ConvertNum[int](num))
 }
 
 func IsInf[N Number,M Number](x N,y M) bool {
@@ -461,61 +494,61 @@ func IsNaN[N Number](num N) bool {
 }
 
 func J0[N Number](num N) N {
-	return ConvertNumber[float64,N](math.J0(float64(num)))
+	return ConvertNum[N](math.J0(float64(num)))
 }
 
 func J1[N Number](num N) N {
-	return ConvertNumber[float64,N](math.J1(float64(num)))
+	return ConvertNum[N](math.J1(float64(num)))
 }
 
 func Jn[N Number,M Number](x N,y M) M {
-	return ConvertNumber[float64,M](math.Jn(ConvertNumber[N,int](x),float64(y)))
+	return ConvertNum[M](math.Jn(ConvertNum[int](x),float64(y)))
 }
 
 func Ldexp[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Ldexp(float64(x),ConvertNumber[M,int](y)))
+	return ConvertNum[N](math.Ldexp(float64(x),ConvertNum[int](y)))
 }
 
 func Lgamma[N Number](num N) (N,int) {
 	x,i := math.Lgamma(float64(num))
-	return ConvertNumber[float64,N](x),i
+	return ConvertNum[N](x),i
 }
 
 func Log[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Log(float64(num)))
+	return ConvertNum[N](math.Log(float64(num)))
 }
 
 func Log10[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Log10(float64(num)))
+	return ConvertNum[N](math.Log10(float64(num)))
 }
 
 func Log1p[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Log1p(float64(num)))
+	return ConvertNum[N](math.Log1p(float64(num)))
 }
 
 func Log2[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Log2(float64(num)))
+	return ConvertNum[N](math.Log2(float64(num)))
 }
 
 func Logb[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Logb(float64(num)))
+	return ConvertNum[N](math.Logb(float64(num)))
 }
 
 func Mod[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Mod(float64(x),float64(y)))
+	return ConvertNum[N](math.Mod(float64(x),float64(y)))
 }
 
 func Modf[N Number](num N) (N,float64) {
 	x,i := math.Modf(float64(num))
-	return ConvertNumber[float64,N](x),i
+	return ConvertNum[N](x),i
 }
 
 func NaN[N Number](n ...func(N)) N{
-	return ConvertNumber[float64,N](math.NaN())
+	return ConvertNum[N](math.NaN())
 }
 
 func Nextafter[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Nextafter(float64(x),float64(y)))
+	return ConvertNum[N](math.Nextafter(float64(x),float64(y)))
 }
 
 func Nextafter32[N Number,M Number](x N,y M) float32 {
@@ -523,15 +556,15 @@ func Nextafter32[N Number,M Number](x N,y M) float32 {
 }
 
 func Pow[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Pow(float64(x),float64(y)))
+	return ConvertNum[N](math.Pow(float64(x),float64(y)))
 }
 
 func Pow10[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Pow10(ConvertNumber[N,int](num)))
+	return ConvertNum[N](math.Pow10(ConvertNum[int](num)))
 }
 
 func Remainder[N Number,M Number](x N,y M) N {
-	return ConvertNumber[float64,N](math.Remainder(float64(x),float64(y)))
+	return ConvertNum[N](math.Remainder(float64(x),float64(y)))
 }
 
 func Round[N Number](num N) N {
@@ -547,28 +580,28 @@ func Signbit[N Number](num N) bool {
 }
 
 func Sin[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Sin(float64(num)))
+	return ConvertNum[N](math.Sin(float64(num)))
 }
 
 func Sincos[N Number](num N) (N,N) {
 	x,y:=math.Sincos(float64(num))
-	return ConvertNumber[float64,N](x),ConvertNumber[float64,N](y)
+	return ConvertNum[N](x),ConvertNum[N](y)
 }
 
 func Sinh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Sinh(float64(num)))
+	return ConvertNum[N](math.Sinh(float64(num)))
 }
 
 func Sqrt[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Sqrt(float64(num)))
+	return ConvertNum[N](math.Sqrt(float64(num)))
 }
 
 func Tan[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Tan(float64(num)))
+	return ConvertNum[N](math.Tan(float64(num)))
 }
 
 func Tanh[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Tanh(float64(num)))
+	return ConvertNum[N](math.Tanh(float64(num)))
 }
 
 func Trunc[N Number](num N) N {
@@ -576,13 +609,13 @@ func Trunc[N Number](num N) N {
 }
 
 func Y0[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Y0(float64(num)))
+	return ConvertNum[N](math.Y0(float64(num)))
 }
 
 func Y1[N Number](num N) N {
-	return ConvertNumber[float64,N](math.Y1(float64(num)))
+	return ConvertNum[N](math.Y1(float64(num)))
 }
 
 func Yn[N Number,M Number](x N,y M) M {
-	return ConvertNumber[float64,M](math.Yn(ConvertNumber(x,utils.TypeRef[int]()),float64(y)))
+	return ConvertNum[M](math.Yn(ConvertNumber(x,utils.TypeRef[int]()),float64(y)))
 }
