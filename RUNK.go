@@ -6,19 +6,24 @@ with any of go's number types. There are some minor additions added for convenie
 behavior is preserved.
 */
 import (
-	"fmt"
 	"github.com/Patrick-ring-motive/utils"
 	"math"
 	"strconv"
 )
 
-func main() {
-	fmt.Println(Acos(int32(10)))
-	fmt.Println(MaxFloat64,ConvertNumber(MaxFloat64,utils.TypeRef[float32]()))
-	fmt.Println(Max(1,2,3,4))
-}
+/*
+Some notes on some unusual patterns that I employ.
 
+`func(T){}` is a function that takes a single typed parameter and does nothing. 
+This is my way of passing a type reference around without having to instantiate it. 
+Mostly it is abstracted away but you will see it show in parameters sometimes. 
+Utils has a convenient function to do this called TypeRef which you can use to generate these references.
+You can generate them from an abstract type like so: `utils.TypeRef[int]()` or from a concrete type like so: `utils.TypeRef(0)`.
 
+`*[1]T` is a pointer to an array of length 1 of type T. This ensures that values are passed by reference and not
+copied and facilitates passing values back from a defer/recover block.
+
+*/
 /*Constant values for minimum and maximum values. Most are directly ripped from the original math*/
 const (
 	MaxInt                 int     = 1<<(strconv.IntSize-1) - 1  // MaxInt32 or MaxInt64 depending on intSize.
