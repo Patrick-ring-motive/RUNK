@@ -85,8 +85,13 @@ for each indiviual type. ConvertNumber handles converting between number types w
 Number designation on the return. You'll see me using the `func(T)` syntax which is a pattern that I use to
 pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
 maitain type safety. This should work for most scenarios.
-The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we truncate*/
+The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we round by default but that can be modified by passing a function in the roundingMode paraneter of ConvertNumberBy*/
 
+
+/*ConvertNum is the most flexible conversion function as it accepts an any type. 
+It is needed to make number conversion more concise. Even though it is intended to use with numbers, it will make a best effort to convert non number types. Typical usade looks like
+`ConvertNum[int](11.2)` which will return 11.
+*/
 func ConvertNum[To Number](f any, t ...func(To)) To {
 	switch v := f.(type) {
 		case 	int:
