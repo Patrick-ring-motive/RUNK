@@ -114,10 +114,23 @@ func ConvertNum[To Number](f any, t ...func(To)) To {
 	}
 	return utils.ConvertType(f,utils.TypeRef[To]())
 }
+
 func ConvertNumber[From Number, To Number](f From, t ...func(To)) To {
 	return ConvertNumberBy(f, func(To){})
 }
+
 func ConvertNumberBy[From Number, To Number](f From, t func(To),roundMode ...func(float64)float64) To {
+		var zt To
+		a := &[1]To{zt}
+	convertNumberBy(a,f,t,roundMode...)
+		return a[0]
+}
+func convertNumberBy[From Number, To Number](a *[1]To,f From, t func(To),roundMode ...func(float64)float64)  {
+	defer func() {
+		if r := recover(); r != nil {
+			a[0] = utils.ConvertType(f,utils.TypeRef[To]())
+		}
+	}()
 	mode := math.Round
 	if(len(roundMode)>0){
 		mode = roundMode[0]
@@ -132,46 +145,60 @@ func ConvertNumberBy[From Number, To Number](f From, t func(To),roundMode ...fun
 	switch any(t).(type) {
 	case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
 		if(isNaN){
-			return z
+			a[0] = z
+			return
 		}
 		if(istInf){
-			return max
+			a[0] = max
+			return
 		}
 		if(float64(f) > float64(max)){
-			return max
+			a[0] = max
+			return
 		}
 		if(is_Inf){
-			return min
+			a[0] = min
+			return
 		}
 		if(float64(f) < float64(min)){
-			return min
+			a[0] = min
+			return
 		}
 		switch any(f).(type) {
 			case float32,float64:
 				r := mode(float64(f))
 				if(math.IsNaN(r)){
-					return z
+					a[0] = z
+					return
 				}
 				if(math.IsInf(r, 1)){
-					return max
+					a[0] = max
+					return
 				}
 				if(r > float64(max)){
-					return max
+					a[0] = max
+					return
 				}
 				if(math.IsInf(r, -1)){
-					return min
+					a[0] = min
+					return
 				}
 				if(r < float64(min)){
-					return min
+					a[0] = min
+					return
 				}
-				return To(r)
+				a[0] = To(r)
+				return
 			default:
-				return To(f)
+			a[0] = To(f)
+			return
 		}
 	case func(float32),func(float64):
-		return To(f)
+		a[0] = To(f)
+		return
 	default:
-		return To(f)
+		a[0] = To(f)
+		return
 	}
 }
 
