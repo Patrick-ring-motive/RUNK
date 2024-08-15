@@ -84,6 +84,9 @@ const (
 	SmallestNonzeroFloat64 float64 = 0x1p-1022 * 0x1p-52 // 4.9406564584124654417656879286822137236505980e-324
 )
 
+type runk string
+var Runk = runk("RUNK")
+
 /*
 byte is an alias for uint8 but it seems wrong to not include it explicitly.
 The compiler won't let me do have both but just so you know it isn't forgotten I have included it with this interface.
@@ -113,31 +116,31 @@ It is needed to make number conversion more concise. Even though it is intended 
 func ConvertNum[To Number](f any, t ...func(To)) To {
 	switch v := f.(type) {
 		case 	int:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[int,To](v)
 		case int8:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[int8,To](v)
 		case int16:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[int16,To](v)
 		case int32:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[int32,To](v)
 		case int64:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[int64,To](v)
 		case uint:
-			ConvertNumber(v,utils.TypeRef[To]())
+			ConvertNumber[uint,To](v)
 		case uint8:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[uint8,To](v)
 		case uint16:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[uint16,To](v)
 		case uint32:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[uint32,To](v)
 		case uint64:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[uint64,To](v)
 		case uintptr:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[uintptr,To](v)
 		case float32:
-			return ConvertNumber(v,utils.TypeRef[To]())
+			return ConvertNumber[float32,To](v)
 		case float64:
-			return ConvertNumber(v,utils.TypeRef[To]()) 
+			return ConvertNumber[float64,To](v) 
 	case bool:
 		if(v){
 			return To(1)
@@ -145,9 +148,9 @@ func ConvertNum[To Number](f any, t ...func(To)) To {
 			return To(0)
 		}
 	default:
-			return utils.ConvertType(f,utils.TypeRef[To]())
+			return utils.ConvertType[any,To](f)
 	}
-	return utils.ConvertType(f,utils.TypeRef[To]())
+	return utils.ConvertType[any,To](f)
 }
 
 
@@ -157,22 +160,23 @@ Number designation on the return. You'll see me using the `func(T)` syntax which
 pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
 maitain type safety. This should work for most scenarios.
 The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we round by default but that can be modified by passing a function in the roundingMode paraneter of ConvertNumberBy*/
-func ConvertNumber[From Number, To Number](f From, t ...func(To)) To {
-	return ConvertNumberBy(f, func(To){})
+func ConvertNumber[From Number, To Number](f From,t ...func(To)) To {
+	return ConvertNumberBy[From,To](f)
 }
 
-func ConvertNumberBy[From Number, To Number](f From, t func(To),roundMode ...func(float64)float64) To {
+func ConvertNumberBy[From Number, To Number](f From,roundMode ...func(float64)float64) To {
 		var zt To
 		a := &[1]To{zt}
-	convertNumberBy(a,f,t,roundMode...)
+	convertNumberBy(a,f,roundMode...)
 		return a[0]
 }
-func convertNumberBy[From Number, To Number](a *[1]To,f From, t func(To),roundMode ...func(float64)float64)  {
+func convertNumberBy[From Number, To Number](a *[1]To,f From,roundMode ...func(float64)float64)  {
 	defer func() {
 		if r := recover(); r != nil {
 			a[0] = utils.ConvertType(f,utils.TypeRef[To]())
 		}
 	}()
+	var t To
 	mode := math.Round
 	if(len(roundMode)>0){
 		mode = roundMode[0]
@@ -180,12 +184,12 @@ func convertNumberBy[From Number, To Number](a *[1]To,f From, t func(To),roundMo
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOfType(t)
+	z := utils.ZeroOfType[To]()
 	max := MaxNum(z)
 	min := MinNum(z)
 
 	switch any(t).(type) {
-	case func(int),func(int8),func(int16),func(int32),func(int64),func(uint),func(uint8),func(uint16),func(uint32),func(uint64),func(uintptr):
+	case int,int8,int16,int32,int64,uint,uint8,uint16,uint32,uint64,uintptr:
 		if(isNaN){
 			a[0] = z
 			return
@@ -235,7 +239,7 @@ func convertNumberBy[From Number, To Number](a *[1]To,f From, t func(To),roundMo
 			a[0] = To(f)
 			return
 		}
-	case func(float32),func(float64):
+	case float32,float64:
 		a[0] = To(f)
 		return
 	default:
@@ -463,7 +467,7 @@ func Cbrt[N Number](num N) N {
 }
 
 func Ceil[N Number](num N) N {
-	return ConvertNumberBy(math.Ceil(float64(num)),utils.TypeRef[N](),math.Ceil)
+	return ConvertNumberBy[float64,N](math.Ceil(float64(num)),math.Ceil)
 }
 
 func Copysign[N Number,M Number](f N,sign M) N {
@@ -531,7 +535,7 @@ func Float64frombits[N Number](x N) float64 {
 }
 
 func Floor[N Number](num N) N {
-	return ConvertNumberBy(math.Floor(float64(num)),utils.TypeRef[N](),math.Floor)
+	return ConvertNumberBy[float64,N](math.Floor(float64(num)),math.Floor)
 }
 
 func Frexp[N Number](num N) (frac float64, exp int) {
@@ -637,11 +641,11 @@ func Remainder[N Number,M Number](x N,y M) N {
 }
 
 func Round[N Number](num N) N {
-	return ConvertNumberBy(math.Round(float64(num)),utils.TypeRef[N](),math.Round)
+	return ConvertNumberBy[float64,N](math.Round(float64(num)),math.Round)
 }
 
 func RoundToEven[N Number](num N) N {
-	return ConvertNumberBy(math.RoundToEven(float64(num)),utils.TypeRef[N](),math.RoundToEven)
+	return ConvertNumberBy[float64,N](math.RoundToEven(float64(num)),math.RoundToEven)
 }
 
 func Signbit[N Number](num N) bool {
@@ -674,7 +678,7 @@ func Tanh[N Number](num N) N {
 }
 
 func Trunc[N Number](num N) N {
-	return ConvertNumberBy(math.Trunc(float64(num)),utils.TypeRef[N](),math.Trunc)
+	return ConvertNumberBy[float64,N](math.Trunc(float64(num)),math.Trunc)
 }
 
 func Y0[N Number](num N) N {
@@ -686,5 +690,5 @@ func Y1[N Number](num N) N {
 }
 
 func Yn[N Number,M Number](x N,y M) M {
-	return ConvertNum[M](math.Yn(ConvertNumber(x,utils.TypeRef[int]()),float64(y)))
+	return ConvertNum[M](math.Yn(ConvertNumber[N,int](x),float64(y)))
 }
