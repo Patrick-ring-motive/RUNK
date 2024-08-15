@@ -47,9 +47,8 @@ func example(carrier *[1]outputType,input inputType){
 
 This is a pattern than handles errors by "returning" a fallback value 
 on panic or nil. This pattern is difficult to abstract out because go generics dont handle various function types well and the defer needs to happen one function call deeper than where we intend to recover a panic.
-
-
 */
+
 /*Constant values for minimum and maximum values. Most are directly ripped from the original math*/
 const (
 	MaxInt                 int     = 1<<(strconv.IntSize-1) - 1  // MaxInt32 or MaxInt64 depending on intSize.
@@ -173,7 +172,7 @@ func ConvertNumberBy[From Number, To Number](f From,roundMode ...func(float64)fl
 func convertNumberBy[From Number, To Number](a *[1]To,f From,roundMode ...func(float64)float64)  {
 	defer func() {
 		if r := recover(); r != nil {
-			a[0] = utils.ConvertType(f,utils.TypeRef[To]())
+			a[0] = CoerceNumber(f,utils.TypeRef[To]())
 		}
 	}()
 	var t To
