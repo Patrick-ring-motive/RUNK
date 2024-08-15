@@ -23,6 +23,32 @@ You can generate them from an abstract type like so: `utils.TypeRef[int]()` or f
 `*[1]T` is a pointer to an array of length 1 of type T. This ensures that values are passed by reference and not
 copied and facilitates passing values back from a defer/recover block.
 
+That brings me to the unconventional error handling pattern.
+
+```
+func Example(input inputType)outputType{
+  var z outputType
+  carrier := *[1]outputType{z}
+  example(carrier,input)
+  return carrier[0]
+}
+func example(carrier *[1]outputType,input inputType){
+	defer func() {
+		if r := recover(); r != nil {
+			carrier[0] = fallbackValue
+		}
+	}()
+	carrier[0] = attemptSomething(input)
+	if(carrier[0] == nil){
+		carrier[0] = fallbackValue
+	}
+}
+```
+
+This is a pattern than handles errors by "returning" a fallback value 
+on panic or nil. This pattern is difficult to abstract out because go generics dont handle various function types well and the defer needs to happen one function call deeper than where we intend to recover a panic.
+
+
 */
 /*Constant values for minimum and maximum values. Most are directly ripped from the original math*/
 const (
