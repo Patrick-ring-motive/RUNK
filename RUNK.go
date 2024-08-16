@@ -176,7 +176,7 @@ func ConvertNumberBy[From Number, To Number](f From, roundMode ...func(float64) 
 func convertNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
 	defer func() {
 		if r := recover(); r != nil {
-			a[0] = CoerceNumber(f, utils.TypeRef[To]())
+			a[0] = CoerceNumber[From, To](f)
 		}
 	}()
 	var t To
@@ -258,9 +258,21 @@ If it fails to convert then it will do an unsafe type coercion. This is a bad id
 it is the only way to get the compiler to do it sometimes.
 */
 func CoerceNumber[From Number, To Number](f From, t ...func(To)) To {
-	return CoerceNumberBy(f, func(To) {})
+	return CoerceNumberBy[From, To](f)
 }
-func CoerceNumberBy[From Number, To Number](f From, t func(To), roundMode ...func(float64) float64) To {
+func CoerceNumberBy[From Number, To Number](f From, roundMode ...func(float64) float64) To {
+	var zt To
+	a := &[1]To{zt}
+	coerceNumberBy(a, f, roundMode...)
+	return a[0]
+}
+func coerceNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
+	defer func() {
+		if r := recover(); r != nil {
+			a[0] = utils.ZeroOfType[To]()
+		}
+	}()
+	t := func(To) {}
 	mode := math.Round
 	if len(roundMode) > 0 {
 		mode = roundMode[0]
@@ -268,78 +280,104 @@ func CoerceNumberBy[From Number, To Number](f From, t func(To), roundMode ...fun
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOfType(t)
+	z := utils.ZeroOfType[To]()
 	max := MaxNum(z)
 	min := MinNum(z)
 	switch any(t).(type) {
 	case func(int), func(int8), func(int16), func(int32), func(int64), func(uint), func(uint8), func(uint16), func(uint32), func(uint64), func(uintptr):
 		if isNaN {
-			return z
+			a[0] = z
+			return
 		}
 		if istInf {
-			return max
+			a[0] = max
+			return
 		}
 		if float64(f) > float64(max) {
-			return max
+			a[0] = max
+			return
 		}
 		if is_Inf {
-			return min
+			a[0] = min
+			return
 		}
 		if float64(f) < float64(min) {
-			return min
+			a[0] = min
+			return
 		}
 		switch any(f).(type) {
 		case float32, float64:
 			r := mode(float64(f))
 			if math.IsNaN(r) {
-				return z
+				a[0] = z
+				return
 			}
 			if math.IsInf(r, 1) {
-				return max
+				a[0] = max
+				return
 			}
 			if r > float64(max) {
-				return max
+				a[0] = max
+				return
 			}
 			if math.IsInf(r, -1) {
-				return min
+				a[0] = min
+				return
 			}
 			if r < float64(min) {
-				return min
+				a[0] = min
+				return
 			}
-			return To(r)
+			a[0] = To(r)
+			return
 		default:
-			return To(f)
+			a[0] = To(f)
+			return
 		}
 	}
 	switch any(t).(type) {
 	case func(int):
-		return utils.SwitchType(int(f), t)
+		a[0] = utils.SwitchType(int(f), t)
+		return
 	case func(int8):
-		return utils.SwitchType(int8(f), t)
+		a[0] = utils.SwitchType(int8(f), t)
+		return
 	case func(int16):
-		return utils.SwitchType(int16(f), t)
+		a[0] = utils.SwitchType(int16(f), t)
+		return
 	case func(int32):
-		return utils.ForceType(int32(f), t)
+		a[0] = utils.ForceType(int32(f), t)
+		return
 	case func(int64):
-		return utils.SwitchType(int64(f), t)
+		a[0] = utils.SwitchType(int64(f), t)
+		return
 	case func(uint):
-		return utils.SwitchType(uint(f), t)
+		a[0] = utils.SwitchType(uint(f), t)
+		return
 	case func(uint8):
-		return utils.SwitchType(uint8(f), t)
+		a[0] = utils.SwitchType(uint8(f), t)
+		return
 	case func(uint16):
-		return utils.SwitchType(uint16(f), t)
+		a[0] = utils.SwitchType(uint16(f), t)
+		return
 	case func(uint32):
-		return utils.SwitchType(uint32(f), t)
+		a[0] = utils.SwitchType(uint32(f), t)
+		return
 	case func(uint64):
-		return utils.SwitchType(uint64(f), t)
+		a[0] = utils.SwitchType(uint64(f), t)
+		return
 	case func(uintptr):
-		return utils.SwitchType(uintptr(f), t)
+		a[0] = utils.SwitchType(uintptr(f), t)
+		return
 	case func(float32):
-		return utils.SwitchType(float32(f), t)
+		a[0] = utils.SwitchType(float32(f), t)
+		return
 	case func(float64):
-		return utils.SwitchType(float64(f), t)
+		a[0] = utils.SwitchType(float64(f), t)
+		return
 	default:
-		return utils.ForceType(f, t)
+		a[0] = utils.ForceType(f, t)
+		return
 	}
 }
 
