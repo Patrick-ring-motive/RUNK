@@ -115,7 +115,7 @@ ConvertNum is the most flexible conversion function as it accepts an any type.
 It is needed to make number conversion more concise. Even though it is intended to use with numbers, it will make a best effort to convert non number types. Typical usade looks like
 `ConvertNum[int](11.2)` which will return 11.
 */
-func ConvertNum[To Number](f any, t ...func(To)) To {
+func ConvertNum[To Number](f any) To {
 	switch v := f.(type) {
 	case int:
 		return ConvertNumber[int, To](v)
@@ -163,7 +163,7 @@ pass around a type without having to instantiate it. This works to give the comp
 maitain type safety. This should work for most scenarios.
 The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we round by default but that can be modified by passing a function in the roundingMode paraneter of ConvertNumberBy
 */
-func ConvertNumber[From Number, To Number](f From, t ...func(To)) To {
+func ConvertNumber[From Number, To Number](f From) To {
 	return ConvertNumberBy[From, To](f)
 }
 
@@ -176,7 +176,7 @@ func ConvertNumberBy[From Number, To Number](f From, roundMode ...func(float64) 
 func convertNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
 	defer func() {
 		if r := recover(); r != nil {
-			a[0] = CoerceNumber[From, To](f)
+			a[0] = CoerceNumberBy[From, To](f, roundMode...)
 		}
 	}()
 	var t To
@@ -187,7 +187,7 @@ func convertNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOfType[To]()
+	z := utils.ZeroOf[To]()
 	max := MaxNum(z)
 	min := MinNum(z)
 
@@ -257,7 +257,7 @@ It attempts to convert the type to of the first parameter to the type passed as 
 If it fails to convert then it will do an unsafe type coercion. This is a bad idea and should be avoided but
 it is the only way to get the compiler to do it sometimes.
 */
-func CoerceNumber[From Number, To Number](f From, t ...func(To)) To {
+func CoerceNumber[From Number, To Number](f From) To {
 	return CoerceNumberBy[From, To](f)
 }
 func CoerceNumberBy[From Number, To Number](f From, roundMode ...func(float64) float64) To {
@@ -269,10 +269,10 @@ func CoerceNumberBy[From Number, To Number](f From, roundMode ...func(float64) f
 func coerceNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
 	defer func() {
 		if r := recover(); r != nil {
-			a[0] = utils.ZeroOfType[To]()
+			a[0] = utils.ZeroOf[To]()
 		}
 	}()
-	t := func(To) {}
+	var t To
 	mode := math.Round
 	if len(roundMode) > 0 {
 		mode = roundMode[0]
@@ -280,11 +280,11 @@ func coerceNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(
 	isNaN := math.IsNaN(float64(f))
 	istInf := math.IsInf(float64(f), 1)
 	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOfType[To]()
+	z := utils.ZeroOf[To]()
 	max := MaxNum(z)
 	min := MinNum(z)
 	switch any(t).(type) {
-	case func(int), func(int8), func(int16), func(int32), func(int64), func(uint), func(uint8), func(uint16), func(uint32), func(uint64), func(uintptr):
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
 		if isNaN {
 			a[0] = z
 			return
@@ -335,109 +335,109 @@ func coerceNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(
 			return
 		}
 	}
-	switch any(t).(type) {
-	case func(int):
-		a[0] = utils.SwitchType(int(f), t)
+	switch v := any(t).(type) {
+	case int:
+		a[0] = utils.Switch[int, To](v)
 		return
-	case func(int8):
-		a[0] = utils.SwitchType(int8(f), t)
+	case int8:
+		a[0] = utils.Switch[int8, To](v)
 		return
-	case func(int16):
-		a[0] = utils.SwitchType(int16(f), t)
+	case int16:
+		a[0] = utils.Switch[int16, To](v)
 		return
-	case func(int32):
-		a[0] = utils.ForceType(int32(f), t)
+	case int32:
+		a[0] = utils.Switch[int32, To](v)
 		return
-	case func(int64):
-		a[0] = utils.SwitchType(int64(f), t)
+	case int64:
+		a[0] = utils.Switch[int64, To](v)
 		return
-	case func(uint):
-		a[0] = utils.SwitchType(uint(f), t)
+	case uint:
+		a[0] = utils.Switch[uint, To](v)
 		return
-	case func(uint8):
-		a[0] = utils.SwitchType(uint8(f), t)
+	case uint8:
+		a[0] = utils.Switch[uint8, To](v)
 		return
-	case func(uint16):
-		a[0] = utils.SwitchType(uint16(f), t)
+	case uint16:
+		a[0] = utils.Switch[uint16, To](v)
 		return
-	case func(uint32):
-		a[0] = utils.SwitchType(uint32(f), t)
+	case uint32:
+		a[0] = utils.Switch[uint32, To](v)
 		return
-	case func(uint64):
-		a[0] = utils.SwitchType(uint64(f), t)
+	case uint64:
+		a[0] = utils.Switch[uint64, To](v)
 		return
-	case func(uintptr):
-		a[0] = utils.SwitchType(uintptr(f), t)
+	case uintptr:
+		a[0] = utils.Switch[uintptr, To](v)
 		return
-	case func(float32):
-		a[0] = utils.SwitchType(float32(f), t)
+	case float32:
+		a[0] = utils.Switch[float32, To](v)
 		return
-	case func(float64):
-		a[0] = utils.SwitchType(float64(f), t)
+	case float64:
+		a[0] = utils.Switch[float64, To](v)
 		return
 	default:
-		a[0] = utils.ForceType(f, t)
+		a[0] = utils.Force[From, To](f)
 		return
 	}
 }
 
 /* This function takes in the minimum number from the bottom of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
-func MinNum[N Number](num ...N) N {
-	var n N
+func MinNum[Num Number](num ...Num) Num {
+	var n Num
 	switch any(n).(type) {
 	case int:
-		return N(AsNumber(MinInt))
+		return Num(AsNumber(MinInt))
 	case int8:
-		return N(AsNumber(MinInt8))
+		return Num(AsNumber(MinInt8))
 	case int16:
-		return N(AsNumber(MinInt16))
+		return Num(AsNumber(MinInt16))
 	case int32:
-		return N(AsNumber(MinInt32))
+		return Num(AsNumber(MinInt32))
 	case int64:
-		return N(AsNumber(MinInt64))
+		return Num(AsNumber(MinInt64))
 	case uint, uint8, uint16, uint32, uint64, uintptr:
-		return N(AsNumber(0))
+		return Num(AsNumber(0))
 	case float32:
-		return N(AsNumber(MinFloat32))
+		return Num(AsNumber(MinFloat32))
 	case float64:
-		return N(AsNumber(MinFloat64))
+		return Num(AsNumber(MinFloat64))
 	default:
-		return utils.ZeroOfType[N]()
+		return utils.ZeroOf[Num]()
 	}
 }
 
 /* This function takes in the maximum number from the top of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
-func MaxNum[N Number](num ...N) N {
-	var n N
+func MaxNum[Num Number](num ...Num) Num {
+	var n Num
 	switch any(n).(type) {
 	case int:
-		return N(AsNumber(MaxInt))
+		return Num(AsNumber(MaxInt))
 	case int8:
-		return N(AsNumber(MaxInt8))
+		return Num(AsNumber(MaxInt8))
 	case int16:
-		return N(AsNumber(MaxInt16))
+		return Num(AsNumber(MaxInt16))
 	case int32:
-		return N(AsNumber(MaxInt32))
+		return Num(AsNumber(MaxInt32))
 	case int64:
-		return N(AsNumber(MaxInt64))
+		return Num(AsNumber(MaxInt64))
 	case uint:
-		return N(AsNumber(MaxUint))
+		return Num(AsNumber(MaxUint))
 	case uint8:
-		return N(AsNumber(MaxUint8))
+		return Num(AsNumber(MaxUint8))
 	case uint16:
-		return N(AsNumber(MaxUint16))
+		return Num(AsNumber(MaxUint16))
 	case uint32:
-		return N(AsNumber(MaxUint32))
+		return Num(AsNumber(MaxUint32))
 	case uint64:
-		return N(AsNumber(MaxUint64))
+		return Num(AsNumber(MaxUint64))
 	case uintptr:
-		return N(AsNumber(MaxUintptr))
+		return Num(AsNumber(MaxUintptr))
 	case float32:
-		return N(AsNumber(MaxFloat32))
+		return Num(AsNumber(MaxFloat32))
 	case float64:
-		return N(AsNumber(MaxFloat64))
+		return Num(AsNumber(MaxFloat64))
 	default:
-		return utils.ZeroOfType[N]()
+		return utils.ZeroOf[Num]()
 	}
 }
 
