@@ -9,6 +9,7 @@ behavior is preserved.
 import (
 	"github.com/Patrick-ring-motive/utils"
 	"math"
+	"reflect"
 	"strconv"
 )
 
@@ -102,6 +103,26 @@ type Number interface {
 	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr | ~float32 | ~float64 | ibyte
 }
 
+/* All the integers */
+type Int interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64 | ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+/* All the unsigned integers */
+type Uint interface {
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 | ~uintptr
+}
+
+/* All the signed integers */
+type Sint interface {
+	~int | ~int8 | ~int16 | ~int32 | ~int64
+}
+
+/* The floats */
+type Float interface {
+	~float32 | ~float64
+}
+
 /*
 AsNumber is just used as a compiler hint to tell the compiler that the value can be any Number type.
 This is used to make the compiler happy when using narrowing conversions.
@@ -110,39 +131,489 @@ func AsNumber[N Number](n N) N {
 	return n
 }
 
+/*This is the lazy built in number conversion method. Sometimes used as a fallback method.*/
+func ToNumber[To Number, From Number](n From) To {
+	return To(n)
+}
+
+func fromNumber[To Number, From Number](from From, roundMode ...func(float64) float64) To {
+	switch any(from).(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+		return fromInt[To](from)
+	case float32, float64:
+		return fromFloat[To](from, roundMode...)
+	}
+	v := reflect.ValueOf(from)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Float32, reflect.Float64:
+		if v.CanFloat() {
+			return fromFloat[To](float64(from), roundMode...)
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			return fromSint[To](int64(from))
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			return fromUint[To](uint64(from))
+		}
+	}
+	return To(from)
+}
+
+func fromInt[To Number, From Number](from From) To {
+	switch any(from).(type) {
+	case int, int8, int16, int32, int64:
+		return fromSint[To](from)
+	case uint, uint8, uint16, uint32, uint64, uintptr:
+		return fromUint[To](from)
+	}
+	v := reflect.ValueOf(from)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			return fromSint[To](int64(from))
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			return fromUint[To](uint64(from))
+		}
+	}
+	return To(from)
+}
+
+func fromSint[To Number, From Number](from From) To {
+	var to To
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+		return sintToInt(from, to)
+	case float32, float64:
+		return sintToFloat[To](from)
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Float32, reflect.Float64:
+		if v.CanFloat() {
+			switch kind {
+			case reflect.Float32:
+				return To(sintToFloat[float32](from))
+			case reflect.Float64:
+				return To(sintToFloat[float64](from))
+			}
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			switch kind {
+			case reflect.Int:
+				return To(sintToSint[int](from))
+			case reflect.Int8:
+				return To(sintToSint[int8](from))
+			case reflect.Int16:
+				return To(sintToSint[int16](from))
+			case reflect.Int32:
+				return To(sintToSint[int32](from))
+			case reflect.Int64:
+				return To(sintToSint[int64](from))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			switch kind {
+			case reflect.Uint:
+				return To(sintToUint[uint](from))
+			case reflect.Uint8:
+				return To(sintToUint[uint8](from))
+			case reflect.Int16:
+				return To(sintToUint[uint16](from))
+			case reflect.Uint32:
+				return To(sintToUint[uint32](from))
+			case reflect.Uint64:
+				return To(sintToUint[uint64](from))
+			case reflect.Uintptr:
+				return To(sintToUint[uintptr](from))
+			}
+		}
+	}
+	return To(from)
+}
+
+func sintToInt[To Number, From Number](from From, to To) To {
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64:
+		return To(sintToSint[To](from))
+	case uint, uint8, uint16, uint32, uint64, uintptr:
+		return To(sintToUint[To](from))
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			switch kind {
+			case reflect.Int:
+				return To(sintToSint[int](from))
+			case reflect.Int8:
+				return To(sintToSint[int8](from))
+			case reflect.Int16:
+				return To(sintToSint[int16](from))
+			case reflect.Int32:
+				return To(sintToSint[int32](from))
+			case reflect.Int64:
+				return To(sintToSint[int64](from))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			switch kind {
+			case reflect.Uint:
+				return To(sintToUint[uint](from))
+			case reflect.Uint8:
+				return To(sintToUint[uint8](from))
+			case reflect.Int16:
+				return To(sintToUint[uint16](from))
+			case reflect.Uint32:
+				return To(sintToUint[uint32](from))
+			case reflect.Uint64:
+				return To(sintToUint[uint64](from))
+			case reflect.Uintptr:
+				return To(sintToUint[uintptr](from))
+			}
+		}
+	}
+	return To(from)
+}
+
+func sintToSint[To Number, From Number](from From) To {
+	max := MaxNum[To]()
+	sint := int64(from)
+	if sint > int64(max) {
+		return max
+	}
+	min := MinNum[To]()
+	if sint < int64(min) {
+		return min
+	}
+	return To(from)
+}
+
+func sintToUint[To Number, From Number](from From) To {
+	if from < 0 {
+		return To(0)
+	}
+	max := MaxNum[To]()
+	if uint64(from) > uint64(max) {
+		return max
+	}
+	return To(from)
+}
+
+func sintToFloat[To Number, From Number](from From) To {
+	return To(from)
+}
+
+func fromUint[To Number, From Number](from From) To {
+	var to To
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+		return uintToInt(from, to)
+	case float32, float64:
+		return uintToFloat[To](from)
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Float32, reflect.Float64:
+		if v.CanFloat() {
+			switch kind {
+			case reflect.Float32:
+				return To(uintToFloat[float32](from))
+			case reflect.Float64:
+				return To(uintToFloat[float64](from))
+			}
+		}
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			switch kind {
+			case reflect.Int:
+				return To(uintToSint[int](from))
+			case reflect.Int8:
+				return To(uintToSint[int8](from))
+			case reflect.Int16:
+				return To(uintToSint[int16](from))
+			case reflect.Int32:
+				return To(uintToSint[int32](from))
+			case reflect.Int64:
+				return To(uintToSint[int64](from))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			switch kind {
+			case reflect.Uint:
+				return To(uintToUint[uint](from))
+			case reflect.Uint8:
+				return To(uintToUint[uint8](from))
+			case reflect.Int16:
+				return To(uintToUint[uint16](from))
+			case reflect.Uint32:
+				return To(uintToUint[uint32](from))
+			case reflect.Uint64:
+				return To(uintToUint[uint64](from))
+			case reflect.Uintptr:
+				return To(uintToUint[uintptr](from))
+			}
+		}
+	}
+	return To(from)
+}
+
+func uintToInt[To Number, From Number](from From, to To) To {
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64:
+		return To(uintToSint[To](from))
+	case uint, uint8, uint16, uint32, uint64, uintptr:
+		return To(uintToUint[To](from))
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			switch kind {
+			case reflect.Int:
+				return To(uintToSint[int](from))
+			case reflect.Int8:
+				return To(uintToSint[int8](from))
+			case reflect.Int16:
+				return To(uintToSint[int16](from))
+			case reflect.Int32:
+				return To(uintToSint[int32](from))
+			case reflect.Int64:
+				return To(uintToSint[int64](from))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			switch kind {
+			case reflect.Uint:
+				return To(uintToUint[uint](from))
+			case reflect.Uint8:
+				return To(uintToUint[uint8](from))
+			case reflect.Int16:
+				return To(uintToUint[uint16](from))
+			case reflect.Uint32:
+				return To(uintToUint[uint32](from))
+			case reflect.Uint64:
+				return To(uintToUint[uint64](from))
+			case reflect.Uintptr:
+				return To(uintToUint[uintptr](from))
+			}
+		}
+	}
+	return To(from)
+}
+
+func uintToSint[To Number, From Number](from From) To {
+	max := MaxNum[To]()
+	if uint64(from) > uint64(max) {
+		return max
+	}
+	return To(from)
+}
+
+func uintToUint[To Number, From Number](from From) To {
+	max := MaxNum[To]()
+	if uint64(from) > uint64(max) {
+		return max
+	}
+	return To(from)
+}
+
+func uintToFloat[To Number, From Number](from From) To {
+	return To(from)
+}
+
+func fromFloat[To Number, From Number](from From, roundMode ...func(float64) float64) To {
+	var to To
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
+		mode := math.Round
+		if len(roundMode) > 0 {
+			mode = roundMode[0]
+		}
+		return floatToInt(from, to, mode)
+	case float32, float64:
+		return floatToFloat[To](from)
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			mode := math.Round
+			if len(roundMode) > 0 {
+				mode = roundMode[0]
+			}
+			switch kind {
+			case reflect.Int:
+				return To(floatToSint[int](from, mode))
+			case reflect.Int8:
+				return To(floatToSint[int8](from, mode))
+			case reflect.Int16:
+				return To(floatToSint[int16](from, mode))
+			case reflect.Int32:
+				return To(floatToSint[int32](from, mode))
+			case reflect.Int64:
+				return To(floatToSint[int64](from, mode))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			mode := math.Round
+			if len(roundMode) > 0 {
+				mode = roundMode[0]
+			}
+			switch kind {
+			case reflect.Uint:
+				return To(floatToUint[uint](from, mode))
+			case reflect.Uint8:
+				return To(floatToUint[uint8](from, mode))
+			case reflect.Int16:
+				return To(floatToUint[uint16](from, mode))
+			case reflect.Uint32:
+				return To(floatToUint[uint32](from, mode))
+			case reflect.Uint64:
+				return To(floatToUint[uint64](from, mode))
+			case reflect.Uintptr:
+				return To(floatToUint[uintptr](from, mode))
+			}
+		}
+	}
+	return To(from)
+}
+
+func floatToInt[To Number, From Number](from From, to To, roundMode func(float64) float64) To {
+	switch any(to).(type) {
+	case int, int8, int16, int32, int64:
+		return floatToSint[To](from, roundMode)
+	case uint, uint8, uint16, uint32, uint64, uintptr:
+		return floatToUint[To](from, roundMode)
+	}
+	v := reflect.ValueOf(to)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			switch kind {
+			case reflect.Int:
+				return To(floatToSint[int](from, roundMode))
+			case reflect.Int8:
+				return To(floatToSint[int8](from, roundMode))
+			case reflect.Int16:
+				return To(floatToSint[int16](from, roundMode))
+			case reflect.Int32:
+				return To(floatToSint[int32](from, roundMode))
+			case reflect.Int64:
+				return To(floatToSint[int64](from, roundMode))
+			}
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			switch kind {
+			case reflect.Uint:
+				return To(floatToUint[uint](from, roundMode))
+			case reflect.Uint8:
+				return To(floatToUint[uint8](from, roundMode))
+			case reflect.Int16:
+				return To(floatToUint[uint16](from, roundMode))
+			case reflect.Uint32:
+				return To(floatToUint[uint32](from, roundMode))
+			case reflect.Uint64:
+				return To(floatToUint[uint64](from, roundMode))
+			case reflect.Uintptr:
+				return To(floatToUint[uintptr](from, roundMode))
+			}
+		}
+	}
+	return To(from)
+}
+
+func floatToSint[To Number, From Number](from From, roundMode func(float64) float64) To {
+	fl := float64(from)
+	r := roundMode(fl)
+	if math.IsNaN(fl) {
+		return To(0)
+	}
+	max := MaxNum[To]()
+	flmax := float64(max)
+	if math.IsInf(fl, 1) || fl > flmax || r > flmax {
+		return max
+	}
+	min := MinNum[To]()
+	flmin := float64(min)
+	if math.IsInf(fl, -1) || fl < flmin || r < flmin {
+		return min
+	}
+	return To(r)
+}
+
+func floatToUint[To Number, From Number](from From, roundMode func(float64) float64) To {
+	fl := float64(from)
+	r := roundMode(fl)
+	if math.IsNaN(fl) || math.IsInf(fl, -1) || fl < 0.0 || r < 0.0 {
+		return To(0)
+	}
+	max := MaxNum[To]()
+	flmax := float64(max)
+	if math.IsInf(fl, 1) || fl > flmax || r > flmax {
+		return max
+	}
+	return To(from)
+}
+
+func floatToFloat[To Number, From Number](from From) To {
+	return To(from)
+}
+
 /*
 ConvertNum is the most flexible conversion function as it accepts an any type.
 It is needed to make number conversion more concise. Even though it is intended to use with numbers, it will make a best effort to convert non number types. Typical usade looks like
 `ConvertNum[int](11.2)` which will return 11.
 */
 func ConvertNum[To Number](f any) To {
+	if f == nil {
+		return To(0)
+	}
 	switch v := f.(type) {
 	case int:
-		return ConvertNumber[int, To](v)
+		return ConvertNumber[To](v)
 	case int8:
-		return ConvertNumber[int8, To](v)
+		return ConvertNumber[To](v)
 	case int16:
-		return ConvertNumber[int16, To](v)
+		return ConvertNumber[To](v)
 	case int32:
-		return ConvertNumber[int32, To](v)
+		return ConvertNumber[To](v)
 	case int64:
-		return ConvertNumber[int64, To](v)
+		return ConvertNumber[To](v)
 	case uint:
-		ConvertNumber[uint, To](v)
+		ConvertNumber[To](v)
 	case uint8:
-		return ConvertNumber[uint8, To](v)
+		return ConvertNumber[To](v)
 	case uint16:
-		return ConvertNumber[uint16, To](v)
+		return ConvertNumber[To](v)
 	case uint32:
-		return ConvertNumber[uint32, To](v)
+		return ConvertNumber[To](v)
 	case uint64:
-		return ConvertNumber[uint64, To](v)
+		return ConvertNumber[To](v)
 	case uintptr:
-		return ConvertNumber[uintptr, To](v)
+		return ConvertNumber[To](v)
 	case float32:
-		return ConvertNumber[float32, To](v)
+		return ConvertNumber[To](v)
 	case float64:
-		return ConvertNumber[float64, To](v)
+		return ConvertNumber[To](v)
 	case bool:
 		if v {
 			return To(1)
@@ -150,9 +621,22 @@ func ConvertNum[To Number](f any) To {
 			return To(0)
 		}
 	default:
-		return utils.ConvertType[any, To](f)
+		switch k := reflect.ValueOf(f); k.Kind() {
+		case reflect.Float32, reflect.Float64:
+			if k.CanFloat() {
+				return ConvertNumber[To](k.Float())
+			}
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			if k.CanInt() {
+				return ConvertNumber[To](k.Int())
+			}
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			if k.CanUint() {
+				return ConvertNumber[To](k.Uint())
+			}
+		}
 	}
-	return utils.ConvertType[any, To](f)
+	return utils.Convert[To](f)
 }
 
 /*
@@ -161,224 +645,53 @@ for each indiviual type. ConvertNumber handles converting between number types w
 Number designation on the return. You'll see me using the `func(T)` syntax which is a pattern that I use to
 pass around a type without having to instantiate it. This works to give the compiler a hint that it can use to
 maitain type safety. This should work for most scenarios.
-The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float to int conversions we round by default but that can be modified by passing a function in the roundingMode paraneter of ConvertNumberBy
+The main edge cases to worry about are NaN and Inf which can get coerced into a number that isn't very meaningful. NaN converted to an int will return 0 so that at least it maintains the same truthiness and +/- Inf converted to an int will return MaxInt/MinInt. In narrowing integer conversions, if the value is greater than the max of the target type, return the max value. If the value is less than the min of the target value then return min. float64 to float32 out of range conversions will return +-Inf. For float To Number conversions we round by default but that can be modified by passing a function in the roundingMode paraneter of ConvertNumberBy
 */
-func ConvertNumber[From Number, To Number](f From) To {
-	return ConvertNumberBy[From, To](f)
+func ConvertNumber[To Number, From Number](f From) To {
+	return ConvertNumberBy[To](f)
 }
 
-func ConvertNumberBy[From Number, To Number](f From, roundMode ...func(float64) float64) To {
+func ConvertNumberBy[To Number, From Number](from From, roundMode ...func(float64) float64) To {
 	var zt To
 	a := &[1]To{zt}
-	convertNumberBy(a, f, roundMode...)
+	convertNumberBy[To](a, from, roundMode...)
 	return a[0]
 }
-func convertNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
+func convertNumberBy[To Number, From Number](a *[1]To, from From, roundMode ...func(float64) float64) {
 	defer func() {
 		if r := recover(); r != nil {
-			a[0] = CoerceNumberBy[From, To](f, roundMode...)
+			a[0] = To(from)
 		}
 	}()
-	var t To
 	mode := math.Round
 	if len(roundMode) > 0 {
 		mode = roundMode[0]
 	}
-	isNaN := math.IsNaN(float64(f))
-	istInf := math.IsInf(float64(f), 1)
-	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOf[To]()
-	max := MaxNum(z)
-	min := MinNum(z)
-
-	switch any(t).(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
-		if isNaN {
-			a[0] = z
-			return
-		}
-		if istInf {
-			a[0] = max
-			return
-		}
-		if float64(f) > float64(max) {
-			a[0] = max
-			return
-		}
-		if is_Inf {
-			a[0] = min
-			return
-		}
-		if float64(f) < float64(min) {
-			a[0] = min
-			return
-		}
-		switch any(f).(type) {
-		case float32, float64:
-			r := mode(float64(f))
-			if math.IsNaN(r) {
-				a[0] = z
-				return
-			}
-			if math.IsInf(r, 1) {
-				a[0] = max
-				return
-			}
-			if r > float64(max) {
-				a[0] = max
-				return
-			}
-			if math.IsInf(r, -1) {
-				a[0] = min
-				return
-			}
-			if r < float64(min) {
-				a[0] = min
-				return
-			}
-			a[0] = To(r)
-			return
-		default:
-			a[0] = To(f)
-			return
-		}
-	case float32, float64:
-		a[0] = To(f)
-		return
-	default:
-		a[0] = To(f)
+	switch any(from).(type) {
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, float32, float64:
+		a[0] = fromNumber[To](from, roundMode...)
 		return
 	}
-}
-
-/*
-This is the forced number coercion function. utils.SwitchType is a function that facilitates this.
-It attempts to convert the type to of the first parameter to the type passed as `func(T)` in the second parameter using a type switch.
-If it fails to convert then it will do an unsafe type coercion. This is a bad idea and should be avoided but
-it is the only way to get the compiler to do it sometimes.
-*/
-func CoerceNumber[From Number, To Number](f From) To {
-	return CoerceNumberBy[From, To](f)
-}
-func CoerceNumberBy[From Number, To Number](f From, roundMode ...func(float64) float64) To {
-	var zt To
-	a := &[1]To{zt}
-	coerceNumberBy(a, f, roundMode...)
-	return a[0]
-}
-func coerceNumberBy[From Number, To Number](a *[1]To, f From, roundMode ...func(float64) float64) {
-	defer func() {
-		if r := recover(); r != nil {
-			a[0] = utils.ZeroOf[To]()
-		}
-	}()
-	var t To
-	mode := math.Round
-	if len(roundMode) > 0 {
-		mode = roundMode[0]
-	}
-	isNaN := math.IsNaN(float64(f))
-	istInf := math.IsInf(float64(f), 1)
-	is_Inf := math.IsInf(float64(f), -1)
-	z := utils.ZeroOf[To]()
-	max := MaxNum(z)
-	min := MinNum(z)
-	switch any(t).(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr:
-		if isNaN {
-			a[0] = z
+	v := reflect.ValueOf(from)
+	kind := v.Kind()
+	switch kind {
+	case reflect.Float32, reflect.Float64:
+		if v.CanFloat() {
+			a[0] = fromFloat[To](float64(from), mode)
 			return
 		}
-		if istInf {
-			a[0] = max
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		if v.CanInt() {
+			a[0] = fromSint[To](int64(from))
 			return
 		}
-		if float64(f) > float64(max) {
-			a[0] = max
-			return
-		}
-		if is_Inf {
-			a[0] = min
-			return
-		}
-		if float64(f) < float64(min) {
-			a[0] = min
-			return
-		}
-		switch any(f).(type) {
-		case float32, float64:
-			r := mode(float64(f))
-			if math.IsNaN(r) {
-				a[0] = z
-				return
-			}
-			if math.IsInf(r, 1) {
-				a[0] = max
-				return
-			}
-			if r > float64(max) {
-				a[0] = max
-				return
-			}
-			if math.IsInf(r, -1) {
-				a[0] = min
-				return
-			}
-			if r < float64(min) {
-				a[0] = min
-				return
-			}
-			a[0] = To(r)
-			return
-		default:
-			a[0] = To(f)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		if v.CanUint() {
+			a[0] = fromUint[To](uint64(from))
 			return
 		}
 	}
-	switch v := any(t).(type) {
-	case int:
-		a[0] = utils.Switch[int, To](v)
-		return
-	case int8:
-		a[0] = utils.Switch[int8, To](v)
-		return
-	case int16:
-		a[0] = utils.Switch[int16, To](v)
-		return
-	case int32:
-		a[0] = utils.Switch[int32, To](v)
-		return
-	case int64:
-		a[0] = utils.Switch[int64, To](v)
-		return
-	case uint:
-		a[0] = utils.Switch[uint, To](v)
-		return
-	case uint8:
-		a[0] = utils.Switch[uint8, To](v)
-		return
-	case uint16:
-		a[0] = utils.Switch[uint16, To](v)
-		return
-	case uint32:
-		a[0] = utils.Switch[uint32, To](v)
-		return
-	case uint64:
-		a[0] = utils.Switch[uint64, To](v)
-		return
-	case uintptr:
-		a[0] = utils.Switch[uintptr, To](v)
-		return
-	case float32:
-		a[0] = utils.Switch[float32, To](v)
-		return
-	case float64:
-		a[0] = utils.Switch[float64, To](v)
-		return
-	default:
-		a[0] = utils.Force[From, To](f)
-		return
-	}
+	a[0] = To(from)
 }
 
 /* This function takes in the minimum number from the bottom of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
@@ -386,24 +699,39 @@ func MinNum[Num Number](num ...Num) Num {
 	var n Num
 	switch any(n).(type) {
 	case int:
-		return Num(AsNumber(MinInt))
+		return ToNumber[Num](MinInt)
 	case int8:
-		return Num(AsNumber(MinInt8))
+		return ToNumber[Num](MinInt8)
 	case int16:
-		return Num(AsNumber(MinInt16))
+		return ToNumber[Num](MinInt16)
 	case int32:
-		return Num(AsNumber(MinInt32))
+		return ToNumber[Num](MinInt32)
 	case int64:
-		return Num(AsNumber(MinInt64))
+		return ToNumber[Num](MinInt64)
 	case uint, uint8, uint16, uint32, uint64, uintptr:
-		return Num(AsNumber(0))
+		return ToNumber[Num](0)
 	case float32:
-		return Num(AsNumber(MinFloat32))
+		return ToNumber[Num](MinFloat32)
 	case float64:
-		return Num(AsNumber(MinFloat64))
-	default:
-		return utils.ZeroOf[Num]()
+		return ToNumber[Num](MinFloat64)
 	}
+	switch k := reflect.ValueOf(n); k.Kind() {
+	case reflect.Int:
+		return ToNumber[Num](MinInt)
+	case reflect.Int8:
+		return ToNumber[Num](MinInt8)
+	case reflect.Int16:
+		return ToNumber[Num](MinInt16)
+	case reflect.Int32:
+		return ToNumber[Num](MinInt32)
+	case reflect.Int64:
+		return ToNumber[Num](MinInt64)
+	case reflect.Float32:
+		return ToNumber[Num](MinFloat32)
+	case reflect.Float64:
+		return ToNumber[Num](MinFloat64)
+	}
+	return n
 }
 
 /* This function takes in the maximum number from the top of the range for an individual type from the list of constants. The value is returned as a generic Number type*/
@@ -411,34 +739,61 @@ func MaxNum[Num Number](num ...Num) Num {
 	var n Num
 	switch any(n).(type) {
 	case int:
-		return Num(AsNumber(MaxInt))
+		return ToNumber[Num](MaxInt)
 	case int8:
-		return Num(AsNumber(MaxInt8))
+		return ToNumber[Num](MaxInt8)
 	case int16:
-		return Num(AsNumber(MaxInt16))
+		return ToNumber[Num](MaxInt16)
 	case int32:
-		return Num(AsNumber(MaxInt32))
+		return ToNumber[Num](MaxInt32)
 	case int64:
-		return Num(AsNumber(MaxInt64))
+		return ToNumber[Num](MaxInt64)
 	case uint:
-		return Num(AsNumber(MaxUint))
+		return ToNumber[Num](MaxUint)
 	case uint8:
-		return Num(AsNumber(MaxUint8))
+		return ToNumber[Num](MaxUint8)
 	case uint16:
-		return Num(AsNumber(MaxUint16))
+		return ToNumber[Num](MaxUint16)
 	case uint32:
-		return Num(AsNumber(MaxUint32))
+		return ToNumber[Num](MaxUint32)
 	case uint64:
-		return Num(AsNumber(MaxUint64))
+		return ToNumber[Num](MaxUint64)
 	case uintptr:
-		return Num(AsNumber(MaxUintptr))
+		return ToNumber[Num](MaxUintptr)
 	case float32:
-		return Num(AsNumber(MaxFloat32))
+		return ToNumber[Num](MaxFloat32)
 	case float64:
-		return Num(AsNumber(MaxFloat64))
-	default:
-		return utils.ZeroOf[Num]()
+		return ToNumber[Num](MaxFloat64)
 	}
+	switch k := reflect.ValueOf(n); k.Kind() {
+	case reflect.Int:
+		return ToNumber[Num](MaxInt)
+	case reflect.Int8:
+		return ToNumber[Num](MaxInt8)
+	case reflect.Int16:
+		return ToNumber[Num](MaxInt16)
+	case reflect.Int32:
+		return ToNumber[Num](MaxInt32)
+	case reflect.Int64:
+		return ToNumber[Num](MaxInt64)
+	case reflect.Uint:
+		return ToNumber[Num](MaxUint)
+	case reflect.Uint8:
+		return ToNumber[Num](MaxUint8)
+	case reflect.Uint16:
+		return ToNumber[Num](MaxUint16)
+	case reflect.Uint32:
+		return ToNumber[Num](MaxUint32)
+	case reflect.Uint64:
+		return ToNumber[Num](MaxUint64)
+	case reflect.Uintptr:
+		return ToNumber[Num](MaxUintptr)
+	case reflect.Float32:
+		return ToNumber[Num](MaxFloat32)
+	case reflect.Float64:
+		return ToNumber[Num](MaxFloat64)
+	}
+	return n
 }
 
 /* Here starts the functions  ̶s̶t̶o̶l̶e̶n̶taken directly from std math package. You can expect them to behave the same*/
@@ -481,95 +836,95 @@ func Abs[N Number](num N) N {
 }
 
 func Acos[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Acos(float64(num)))
+	return ConvertNumber[N](math.Acos(float64(num)))
 }
 
 func Acosh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Acosh(float64(num)))
+	return ConvertNumber[N](math.Acosh(float64(num)))
 }
 
 func Asin[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Asin(float64(num)))
+	return ConvertNumber[N](math.Asin(float64(num)))
 }
 
 func Asinh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Asinh(float64(num)))
+	return ConvertNumber[N](math.Asinh(float64(num)))
 }
 
 func Atan[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Atan(float64(num)))
+	return ConvertNumber[N](math.Atan(float64(num)))
 }
 
 func Atan2[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Atan2(float64(x), float64(y)))
+	return ConvertNumber[N](math.Atan2(float64(x), float64(y)))
 }
 
 func Atanh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Atanh(float64(num)))
+	return ConvertNumber[N](math.Atanh(float64(num)))
 }
 
 func Cbrt[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Cbrt(float64(num)))
+	return ConvertNumber[N](math.Cbrt(float64(num)))
 }
 
 func Ceil[N Number](num N) N {
-	return ConvertNumberBy[float64, N](math.Ceil(float64(num)), math.Ceil)
+	return ConvertNumberBy[N](math.Ceil(float64(num)), math.Ceil)
 }
 
 func Copysign[N Number, M Number](f N, sign M) N {
-	return ConvertNumber[float64, N](math.Copysign(float64(f), float64(sign)))
+	return ConvertNumber[N](math.Copysign(float64(f), float64(sign)))
 }
 
 func Cos[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Cos(float64(num)))
+	return ConvertNumber[N](math.Cos(float64(num)))
 }
 
 func Cosh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Cosh(float64(num)))
+	return ConvertNumber[N](math.Cosh(float64(num)))
 }
 
 func Dim[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Dim(float64(x), float64(y)))
+	return ConvertNumber[N](math.Dim(float64(x), float64(y)))
 }
 
 func Erf[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Erf(float64(num)))
+	return ConvertNumber[N](math.Erf(float64(num)))
 }
 
 func Erfc[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Erfc(float64(num)))
+	return ConvertNumber[N](math.Erfc(float64(num)))
 }
 
 func Erfcinv[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Erfcinv(float64(num)))
+	return ConvertNumber[N](math.Erfcinv(float64(num)))
 }
 
 func Erfinv[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Erfinv(float64(num)))
+	return ConvertNumber[N](math.Erfinv(float64(num)))
 }
 
 func Exp[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Exp(float64(num)))
+	return ConvertNumber[N](math.Exp(float64(num)))
 }
 
 func Exp2[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Exp2(float64(num)))
+	return ConvertNumber[N](math.Exp2(float64(num)))
 }
 
 func Expm1[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Expm1(float64(num)))
+	return ConvertNumber[N](math.Expm1(float64(num)))
 }
 
 func FMA[N Number, M Number, W Number](x N, y M, z W) N {
-	return ConvertNumber[float64, N](math.FMA(float64(x), float64(y), float64(z)))
+	return ConvertNumber[N](math.FMA(float64(x), float64(y), float64(z)))
 }
 
 func Float32bits[N Number](x N) uint32 {
-	return math.Float32bits(ConvertNumber[N, float32](x))
+	return math.Float32bits(ConvertNumber[float32](x))
 }
 
 func Float32frombits[N Number](x N) float32 {
-	return math.Float32frombits(ConvertNumber[N, uint32](x))
+	return math.Float32frombits(ConvertNumber[uint32](x))
 }
 
 func Float64bits[N Number](x N) uint64 {
@@ -577,11 +932,11 @@ func Float64bits[N Number](x N) uint64 {
 }
 
 func Float64frombits[N Number](x N) float64 {
-	return math.Float64frombits(ConvertNumber[N, uint64](x))
+	return math.Float64frombits(ConvertNumber[uint64](x))
 }
 
 func Floor[N Number](num N) N {
-	return ConvertNumberBy[float64, N](math.Floor(float64(num)), math.Floor)
+	return ConvertNumberBy[N](math.Floor(float64(num)), math.Floor)
 }
 
 func Frexp[N Number](num N) (frac float64, exp int) {
@@ -589,23 +944,23 @@ func Frexp[N Number](num N) (frac float64, exp int) {
 }
 
 func Gamma[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Gamma(float64(num)))
+	return ConvertNumber[N](math.Gamma(float64(num)))
 }
 
 func Hypot[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Hypot(float64(x), float64(y)))
+	return ConvertNumber[N](math.Hypot(float64(x), float64(y)))
 }
 
 func Ilogb[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Gamma(float64(num)))
+	return ConvertNumber[N](math.Gamma(float64(num)))
 }
 
 func Inf[N Number](num N) float64 {
-	return math.Inf(ConvertNumber[N, int](num))
+	return math.Inf(ConvertNumber[int](num))
 }
 
 func IsInf[N Number, M Number](x N, y M) bool {
-	return math.IsInf(float64(x), ConvertNumber[M, int](y))
+	return math.IsInf(float64(x), ConvertNumber[int](y))
 }
 
 func IsNaN[N Number](num N) bool {
@@ -613,31 +968,31 @@ func IsNaN[N Number](num N) bool {
 }
 
 func J0[N Number](num N) N {
-	return ConvertNumber[float64, N](math.J0(float64(num)))
+	return ConvertNumber[N](math.J0(float64(num)))
 }
 
 func J1[N Number](num N) N {
-	return ConvertNumber[float64, N](math.J1(float64(num)))
+	return ConvertNumber[N](math.J1(float64(num)))
 }
 
 func Jn[N Number, M Number](x N, y M) M {
-	return ConvertNumber[float64, M](math.Jn(ConvertNumber[N, int](x), float64(y)))
+	return ConvertNumber[M](math.Jn(ConvertNumber[int](x), float64(y)))
 }
 
 func Ldexp[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Ldexp(float64(x), ConvertNumber[M, int](y)))
+	return ConvertNumber[N](math.Ldexp(float64(x), ConvertNumber[int](y)))
 }
 
 func Lgamma[N Number](num N) (N, int) {
 	x, i := math.Lgamma(float64(num))
-	return ConvertNumber[float64, N](x), i
+	return ConvertNumber[N](x), i
 }
 
 /*I prefer at least the option for single value returns when it makes sense*/
 func Lgam[N Number](num N) N {
 	x, i := math.Lgamma(float64(num))
-	g := ConvertNumber[float64, N](x * float64(i))
-	h := ConvertNumber[float64, N](x)
+	g := ConvertNumber[N](x * float64(i))
+	h := ConvertNumber[N](x)
 	if Abs(h) > Abs(g) {
 		return h
 	}
@@ -645,40 +1000,40 @@ func Lgam[N Number](num N) N {
 }
 
 func Log[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Log(float64(num)))
+	return ConvertNumber[N](math.Log(float64(num)))
 }
 
 func Log10[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Log10(float64(num)))
+	return ConvertNumber[N](math.Log10(float64(num)))
 }
 
 func Log1p[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Log1p(float64(num)))
+	return ConvertNumber[N](math.Log1p(float64(num)))
 }
 
 func Log2[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Log2(float64(num)))
+	return ConvertNumber[N](math.Log2(float64(num)))
 }
 
 func Logb[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Logb(float64(num)))
+	return ConvertNumber[N](math.Logb(float64(num)))
 }
 
 func Mod[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Mod(float64(x), float64(y)))
+	return ConvertNumber[N](math.Mod(float64(x), float64(y)))
 }
 
 func Modf[N Number](num N) (N, float64) {
 	x, i := math.Modf(float64(num))
-	return ConvertNumber[float64, N](x), i
+	return ConvertNumber[N](x), i
 }
 
 func NaN[N Number](n ...func(N)) N {
-	return ConvertNumber[float64, N](math.NaN())
+	return ConvertNumber[N](math.NaN())
 }
 
 func Nextafter[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Nextafter(float64(x), float64(y)))
+	return ConvertNumber[N](math.Nextafter(float64(x), float64(y)))
 }
 
 func Nextafter32[N Number, M Number](x N, y M) float32 {
@@ -686,23 +1041,23 @@ func Nextafter32[N Number, M Number](x N, y M) float32 {
 }
 
 func Pow[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Pow(float64(x), float64(y)))
+	return ConvertNumber[N](math.Pow(float64(x), float64(y)))
 }
 
 func Pow10[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Pow10(ConvertNumber[N, int](num)))
+	return ConvertNumber[N](math.Pow10(ConvertNumber[int](num)))
 }
 
 func Remainder[N Number, M Number](x N, y M) N {
-	return ConvertNumber[float64, N](math.Remainder(float64(x), float64(y)))
+	return ConvertNumber[N](math.Remainder(float64(x), float64(y)))
 }
 
 func Round[N Number](num N) N {
-	return ConvertNumberBy[float64, N](math.Round(float64(num)), math.Round)
+	return ConvertNumberBy[N](math.Round(float64(num)), math.Round)
 }
 
 func RoundToEven[N Number](num N) N {
-	return ConvertNumberBy[float64, N](math.RoundToEven(float64(num)), math.RoundToEven)
+	return ConvertNumberBy[N](math.RoundToEven(float64(num)), math.RoundToEven)
 }
 
 func Signbit[N Number](num N) bool {
@@ -710,42 +1065,42 @@ func Signbit[N Number](num N) bool {
 }
 
 func Sin[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Sin(float64(num)))
+	return ConvertNumber[N](math.Sin(float64(num)))
 }
 
 func Sincos[N Number](num N) (N, N) {
 	x, y := math.Sincos(float64(num))
-	return ConvertNumber[float64, N](x), ConvertNumber[float64, N](y)
+	return ConvertNumber[N](x), ConvertNumber[N](y)
 }
 
 func Sinh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Sinh(float64(num)))
+	return ConvertNumber[N](math.Sinh(float64(num)))
 }
 
 func Sqrt[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Sqrt(float64(num)))
+	return ConvertNumber[N](math.Sqrt(float64(num)))
 }
 
 func Tan[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Tan(float64(num)))
+	return ConvertNumber[N](math.Tan(float64(num)))
 }
 
 func Tanh[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Tanh(float64(num)))
+	return ConvertNumber[N](math.Tanh(float64(num)))
 }
 
 func Trunc[N Number](num N) N {
-	return ConvertNumberBy[float64, N](math.Trunc(float64(num)), math.Trunc)
+	return ConvertNumberBy[N](math.Trunc(float64(num)), math.Trunc)
 }
 
 func Y0[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Y0(float64(num)))
+	return ConvertNumber[N](math.Y0(float64(num)))
 }
 
 func Y1[N Number](num N) N {
-	return ConvertNumber[float64, N](math.Y1(float64(num)))
+	return ConvertNumber[N](math.Y1(float64(num)))
 }
 
 func Yn[N Number, M Number](x N, y M) M {
-	return ConvertNumber[float64, M](math.Yn(ConvertNumber[N, int](x), float64(y)))
+	return ConvertNumber[M](math.Yn(ConvertNumber[int](x), float64(y)))
 }
